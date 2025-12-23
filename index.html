@@ -60,6 +60,26 @@
   .uni-card{flex:1 1 calc(33.333% - 12px);min-width:230px;background:#fff;border-radius:10px;padding:12px;border-top:4px solid var(--blue);box-shadow:0 2px 8px rgba(0,0,0,.04)}
   .cards-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
   @media (max-width:900px){ .uni-card{flex:1 1 100%} }
+
+  /* ===== Mobile Find button adjustments ===== */
+  .find-wrap{display:inline-block}
+  @media (max-width:480px){
+    .find-wrap{
+      position:fixed;
+      bottom:14px;
+      left:12px;
+      right:12px;
+      z-index:60;
+      display:flex;
+      justify-content:center;
+      pointer-events:auto;
+    }
+    .find-wrap .btn{width:100%; border-radius:12px; padding:14px 16px; box-shadow:0 10px 20px rgba(0,0,0,.12)}
+    /* give main content bottom padding so the fixed button doesn't overlap content */
+    main.wrap{padding-bottom:110px}
+    /* slightly increase small note bottom margin */
+    #localNote{margin-bottom:18px}
+  }
 </style>
 </head>
 <body>
@@ -187,7 +207,7 @@
             <label>Number of APs (0–5)</label>
             <input id="n_ap" type="number" min="0" max="5" value="0" />
           </div>
-          <div style="margin-left:auto">
+          <div style="margin-left:auto" class="find-wrap">
             <button class="btn btn-primary" id="findBtn">🔍 Find My Universities</button>
           </div>
         </div>
