@@ -52,7 +52,7 @@
 
 <script>
 /* Replace with your Apps Script URL if you want the results page to also send logs */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/REPLACE_YOUR_SCRIPT_ID/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQOyuoTWw5k6nSJ3BkIAOSO6sqiKdaVirWxromhYCsiEHMoGTVj6PyOHp2zplE_n6phA/exec";
 const LS_DETAILS = "STUDENT_DETAILS";
 const LS_PROFILE = "STUDY_PROFILE";
 function getDetails(){ try{ return JSON.parse(localStorage.getItem(LS_DETAILS)); }catch{ return null; } }
@@ -76,13 +76,17 @@ async function postToAppsScript(payload){
     return {ok:false, message:"Apps Script URL not configured"};
   }
   try{
+    const form = new FormData();
+    form.append('payload', JSON.stringify(payload));
+
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      body: form
     });
-    const txt = await res.text();
-    return {ok:true, status: res.status, text: txt};
+    const text = await res.text();
+    let body = null;
+    try{ body = JSON.parse(text); } catch(e){ body = text; }
+    return { ok: res.ok, status: res.status, body, text };
   }catch(err){
     console.error("Error posting to Apps Script:", err);
     return {ok:false, message:err.message};
