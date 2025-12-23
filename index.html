@@ -222,7 +222,7 @@
 <script>
 /* ========== CONFIG ========== */
 /* Replace with your Apps Script web app URL if you want logging to Sheets */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPVWLOk0lgYA4XUX5Sk5ABZPDQyqeiWpi7nEs-kBpsEyLFuqdJTQpSn3vUUAB_g0s-fw/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQOyuoTWw5k6nSJ3BkIAOSO6sqiKdaVirWxromhYCsiEHMoGTVj6PyOHp2zplE_n6phA/exec";
 
 /* ========== LOCAL STORAGE KEYS ========== */
 const LS_DETAILS = "STUDENT_DETAILS";
@@ -234,20 +234,27 @@ const saveDetailsLocal = (d) => localStorage.setItem(LS_DETAILS, JSON.stringify(
 const getProfile = () => { try{ return JSON.parse(localStorage.getItem(LS_PROFILE)); }catch{ return null; } };
 const saveProfileLocal = (p) => localStorage.setItem(LS_PROFILE, JSON.stringify(p));
 
-/* Simple apps script POST helper (non-blocking) */
+/* Simple apps script POST helper (non-blocking)
+   NOTE: use FormData with 'payload' key to avoid CORS preflight (no custom headers) */
 async function postToAppsScript(payload){
   if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("REPLACE_YOUR_SCRIPT_ID")){
     console.debug("Apps Script URL not configured; skipping post.", payload);
     return {ok:false, message:"Apps Script URL not configured"};
   }
   try{
+    const form = new FormData();
+    form.append('payload', JSON.stringify(payload));
+
     const res = await fetch(APPS_SCRIPT_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
+      method: 'POST',
+      body: form
     });
+
     const text = await res.text();
-    return {ok:true, status:res.status, text};
+    let body = null;
+    try{ body = JSON.parse(text); } catch(e){ body = text; }
+
+    return { ok: res.ok, status: res.status, body, text };
   }catch(err){
     console.error("Apps Script post error:", err);
     return {ok:false, message:err.message};
