@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Study-Abroad Results</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --cs-red:#d22c2c; --cs-ink:#1b1b1b; --cs-muted:#6c757d;
+      --cs-bg:#f7f7fb; --cs-card:#ffffff; --cs-border:#e9ecef;
+      --radius:14px; --shadow:0 10px 30px rgba(0,0,0,.06);
+      --blue:#1E88E5; --green:#10b981; --red:#d22c2c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--cs-bg);color:var(--cs-ink);font-family:Inter, Poppins, "Segoe UI", Roboto}
+    .wrap{max-width:1100px;margin:18px auto;padding:20px}
+    h2{margin:0 0 12px; font-size:clamp(22px,2vw+10px,28px)}
+    .pill{display:inline-flex;background:rgba(210,44,44,.08);color:var(--cs-red);border:1px solid rgba(210,44,44,.18);padding:6px 12px;border-radius:999px;font-weight:700;font-size:13px}
+    .card{background:var(--cs-card);border:1px solid var(--cs-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin:12px 0}
+    .muted{color:var(--cs-muted)}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:10px;overflow:hidden;border-radius:12px}
+    th,td{padding:12px 10px;border-bottom:1px solid var(--cs-border);text-align:left}
+    thead th{background:#fff;font-weight:800}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 18px;border-radius:12px;border:0;cursor:pointer;font-weight:800}
+    .btn-primary{background:var(--cs-red);color:#fff}
+    .group-title{font-size:18px;margin:18px 0 10px;display:flex;align-items:center;gap:10px}
+    .group-title .dot{width:12px;height:12px;border-radius:50%}
+    .amb .dot{background:var(--red)} .tgt .dot{background:var(--blue)} .safe .dot{background:var(--green)}
+    .cards-row{display:flex;flex-wrap:wrap;gap:12px}
+    .uni-card{flex:1 1 calc(33.333% - 12px);min-width:230px;background:#fff;border-radius:10px;padding:12px;border-top:4px solid var(--blue);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+    @media (max-width:900px){ .uni-card{flex:1 1 100%} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="pill">Results</div>
+    <h2>Your University Readiness — Results</h2>
+
+    <div id="studentHeader" class="card" style="display:none">
+      <p id="studentHello" class="muted" style="margin:0"></p>
+    </div>
+
+    <div id="outputRoot"></div>
+
+  </div>
+
+<script>
+/* Replace with your Apps Script URL if you want the results page to also send logs */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/REPLACE_YOUR_SCRIPT_ID/exec";
+const LS_DETAILS = "STUDENT_DETAILS";
+const LS_PROFILE = "STUDY_PROFILE";
+function getDetails(){ try{ return JSON.parse(localStorage.getItem(LS_DETAILS)); }catch{ return null; } }
+function getProfile(){ try{ return JSON.parse(localStorage.getItem(LS_PROFILE)); }catch{ return null; } }
+
+function requireDetailsOrRedirect(){
+  const det = getDetails();
+  if(!det || !det.name || !det.email || !det.mobile || !det.state || !det.city){
+    alert("Please fill your student details first.");
+    location.replace("index.html");
+    return false;
+  }
+  document.getElementById('studentHeader').style.display = "block";
+  document.getElementById('studentHello').textContent = `Hi ${det.name} — showing results for your preferences (${det.city}, ${det.state}).`;
+  return true;
+}
+
+async function postToAppsScript(payload){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("REPLACE_YOUR_SCRIPT_ID")){
+    console.debug("Apps Script URL not configured; skipping post.", payload);
+    return {ok:false, message:"Apps Script URL not configured"};
+  }
+  try{
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const txt = await res.text();
+    return {ok:true, status: res.status, text: txt};
+  }catch(err){
+    console.error("Error posting to Apps Script:", err);
+    return {ok:false, message:err.message};
+  }
+}
+
+(async function boot(){
+  if(!requireDetailsOrRedirect()) return;
+  const profile = getProfile();
+  if(!profile){
+    alert("No predictor inputs found. Please complete the predictor first.");
+    location.replace("index.html");
+    return;
+  }
+
+  // optionally log view
+  postToAppsScript({type:"view_results", timestamp:new Date().toISOString(), details:getDetails(), profile}).then(r=>console.debug("apps script view results:", r));
+
+  // load JSON files (College_finder.json & University.json)
+  let collegeProfile = [], uniList = [];
+  try{
+    const pf = await fetch('College_finder.json').then(r=>r.json());
+    const uni = await fetch('University.json').then(r=>r.json());
+    collegeProfile = pf.map(normalizeProfileRow);
+    uniList = uni.map(normalizeUniRow);
+  }catch(err){
+    document.getElementById('outputRoot').innerHTML = `<div class="card" style="color:#b00">Error loading data files. Ensure College_finder.json and University.json exist.</div>`;
+    console.error(err);
+    return;
+  }
+
+  const user_profile = {
+    "Class 9": profile.c9 || 0, "Class 10": profile.c10 || 0, "Class 11": profile.c11 || 0, "Class 12": profile.c12 || 0,
+    "SAT": profile.sat || 0, "AP": profile.avg_ap || 0,
+    "CC": (profile.cc||0)/3, "EC": (profile.ec||0)/3, "Internship": (profile.intr||0)/2,
+    "Community": profile.community ? 1.0 : 0.0, "Research": profile.research ? 1.0 : 0.0, "LOR": (profile.n_lor||0)/3
+  };
+
+  const selCountries = profile.countries || ["All"];
+  const useAll = selCountries.length===0 || selCountries.includes("All");
+  const filteredProfile = useAll ? collegeProfile : collegeProfile.filter(r=> selCountries.includes(r.Country));
+
+  if(filteredProfile.length === 0){
+    document.getElementById('outputRoot').innerHTML = `<div class="card">No country weightings found for selected country(s).</div>`;
+    return;
+  }
+
+  const acad_keys = ["Class 9","Class 10","Class 11","Class 12","SAT","AP"];
+  const act_keys = ["CC","EC","Internship","Community","Research"];
+
+  const countryScores = filteredProfile.map(row => {
+    let total = 0;
+    acad_keys.concat(act_keys).forEach(k=>{
+      const rowVal = Number(row[k] || 0);
+      total += (Number(user_profile[k] || 0) * rowVal);
+    });
+    total += (Number(user_profile["LOR"]||0) * Number(row["LOR"]||0));
+    return {
+      Country: row.Country,
+      "Total Profile %": Math.round(total*1000)/10
+    };
+  });
+
+  const score_map = {};
+  countryScores.forEach(r=>{ score_map[r.Country] = r["Total Profile %"]; });
+
+  let gap_view = uniList.map(u=>{
+    const your = score_map[u.Country];
+    return Object.assign({}, u, {"Your Profile %": (your===undefined? null : your)});
+  }).filter(u=>u["Your Profile %"] !== null);
+
+  gap_view.forEach(r=>{
+    r["Gap %"] = (Number(r["Required Profile Score"]||0) - Number(r["Your Profile %"]||0));
+    r["Gap %"] = Math.round(r["Gap %"]*10)/10;
+  });
+  gap_view.sort((a,b)=> b["Gap %"] - a["Gap %"]);
+
+  if(gap_view.length === 0){
+    document.getElementById('outputRoot').innerHTML = `<div class="card">No universities mapped to selected country(ies). Try selecting "All" or another country.</div>`;
+    return;
+  }
+
+  // anchor algorithm
+  const posIndices = gap_view.map((r, idx) => r["Gap %"] > 0 ? idx : -1).filter(i=>i>=0);
+  let anchor;
+  if(posIndices.length>0){
+    let minIdx = posIndices[0], minVal = gap_view[minIdx]["Gap %"];
+    posIndices.forEach(i => { if(gap_view[i]["Gap %"] < minVal){ minVal = gap_view[i]["Gap %"]; minIdx = i; }});
+    anchor = minIdx;
+  } else {
+    let minIdx = 0, minVal = Math.abs(gap_view[0]["Gap %"]);
+    for(let i=1;i<gap_view.length;i++){
+      const av = Math.abs(gap_view[i]["Gap %"]);
+      if(av < minVal){ minVal = av; minIdx = i; }
+    }
+    anchor = minIdx;
+  }
+
+  const target_start = Math.max(0, anchor-5);
+  const target_df = gap_view.slice(target_start, anchor+1);
+  const ambitious_df = gap_view.slice(Math.max(0, anchor-11), Math.max(0, anchor-5));
+  const safe_df = gap_view.slice(anchor+1, anchor+7);
+
+  renderResults(countryScores, gap_view, ambitious_df, target_df, safe_df);
+
+  document.addEventListener('click', (e)=>{
+    if(e.target && e.target.id === 'downloadPdf') {
+      downloadDetailedPDF({countryScores,gap_view,ambitious_df,target_df,safe_df});
+    }
+  });
+
+  /* helpers */
+  function normalizeProfileRow(r){
+    const out = {};
+    out.Country = (r.Country || '').trim();
+    const map = {
+      'Class 9':'Class 9','Class 10':'Class 10','Class 11':'Class 11','Class 12':'Class 12',
+      'SAT':'SAT','AP':'AP',
+      'CC (Max 3)':'CC','EC (Max 3)':'EC','Internship (Max 2)':'Internship',
+      'CC':'CC','EC':'EC','Internship':'Internship',
+      'Community':'Community','Research':'Research','LOR':'LOR'
+    };
+    for(const key in map){
+      if(r.hasOwnProperty(key)){
+        out[map[key]] = pctToDecimal(r[key]);
+      } else {
+        out[map[key]] = r[map[key]]!==undefined ? pctToDecimal(r[map[key]]) : 0;
+      }
+    }
+    return out;
+  }
+  function normalizeUniRow(u){
+    return {
+      Country: (u.Country||'').trim(),
+      University: u.University||'',
+      'QS Ranking': (u['QS Ranking']!==undefined && u['QS Ranking']!=='') ? +u['QS Ranking'] : null,
+      'Required Profile Score': +u['Required Profile Score'] || 0
+    };
+  }
+  function pctToDecimal(v){
+    if(v===null || v===undefined) return 0;
+    if(typeof v === 'number') return v;
+    const s = String(v).trim();
+    if(s.endsWith('%')) {
+      const num = parseFloat(s.replace('%','').trim());
+      return (isNaN(num) ? 0 : (num/100));
+    }
+    const num = parseFloat(s);
+    if(isNaN(num)) return 0;
+    return num > 1 ? num/100 : num;
+  }
+
+  function renderResults(countryScores, gap_view, amb, tgt, safe){
+    const out = document.getElementById('outputRoot');
+    let html = '';
+
+    html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">Country-wise Profile Breakdown</div>`;
+    html += `<table style="width:100%"><thead><tr><th>#</th><th>Country</th><th>Total Profile %</th></tr></thead><tbody>`;
+    countryScores.sort((a,b)=> b["Total Profile %"] - a["Total Profile %"]).forEach((r, i)=>{
+      html += `<tr><td style="width:40px">${i+1}</td><td>${escapeHtml(r.Country)}</td><td>${r["Total Profile %"].toFixed(1)}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    html += `<div style="font-size:13px;color:var(--cs-muted);margin-top:8px">(A detailed university gap analysis is available in the downloadable report.)</div>`;
+    html += `</div>`;
+
+    if(amb && amb.length){
+      html += `<div class="group-title amb"><div class="dot"></div><strong>Ambitious Universities</strong></div>`;
+      html += `<div class="cards-row">`;
+      amb.forEach(u=>{ html += uniCardHtml(u, 'amb'); });
+      html += `</div>`;
+    }
+
+    if(tgt && tgt.length){
+      html += `<div class="group-title tgt"><div class="dot"></div><strong>Target Universities</strong></div>`;
+      html += `<div class="cards-row">`;
+      tgt.forEach(u=>{ html += uniCardHtml(u,'tgt'); });
+      html += `</div>`;
+    }
+
+    if(safe && safe.length){
+      html += `<div class="group-title safe"><div class="dot"></div><strong>Safe Universities</strong></div>`;
+      html += `<div class="cards-row">`;
+      safe.forEach(u=>{ html += uniCardHtml(u,'safe'); });
+      html += `</div>`;
+    }
+
+    html += `<div class="card" style="display:flex;justify-content:space-between;align-items:center"><div><strong>Download your full report</strong><div style="font-size:13px;color:var(--cs-muted)">PDF export available</div></div><div><button class="btn btn-primary" id="downloadPdf">Download Detailed PDF Report</button></div></div>`;
+
+    out.innerHTML = html;
+  }
+
+  function uniCardHtml(u, group){
+    const color = group==='amb' ? 'var(--red)' : group==='tgt' ? 'var(--blue)' : 'var(--green)';
+    return `<div class="uni-card" style="border-top:4px solid ${color}">
+              <h4 style="margin:0 0 6px;font-size:14px">${escapeHtml(u.University)}</h4>
+              <div style="font-size:12px;color:#666;margin-bottom:8px">${escapeHtml(u.Country)} · QS #${u['QS Ranking'] ? escapeHtml(String(u['QS Ranking'])) : '–'}</div>
+              <div style="font-size:13px">
+                <strong>Required:</strong> ${escapeHtml(String(u['Required Profile Score']))}<br>
+                <strong>Your score:</strong> ${escapeHtml(String(u['Your Profile %']))}<br>
+                <strong>Gap %:</strong> ${escapeHtml(String(u['Gap %']))}
+              </div>
+            </div>`;
+  }
+  function escapeHtml(s){ return String(s || '').replace(/[&<>"']/g, (m)=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  function downloadDetailedPDF(data){
+    if(!data || !data.gap_view) {
+      alert("No data to generate PDF. Please run the predictor first.");
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    doc.setFontSize(18);
+    doc.text("Study-Abroad | Personalised University Report", 40, 40);
+
+    doc.setFontSize(12);
+    doc.text("Country-wise Profile Score", 40, 70);
+    const countryBody = data.countryScores.map(r => [r.Country, r["Total Profile %"].toFixed(1)]);
+    doc.autoTable({
+      startY: 80,
+      head: [['Country','Total Profile %']],
+      body: countryBody,
+      theme: 'grid',
+      headStyles:{fillColor:[230,230,230]}
+    });
+
+    const afterCountry = doc.lastAutoTable.finalY + 16;
+    doc.text("University Gap Analysis", 40, afterCountry);
+    const gapBody = data.gap_view.map(r => [
+      r.Country,
+      r.University,
+      r["QS Ranking"] !== null ? String(r["QS Ranking"]) : '',
+      String(r["Required Profile Score"]),
+      String(r["Your Profile %"]),
+      String(r["Gap %"])
+    ]);
+    doc.autoTable({
+      startY: afterCountry + 10,
+      head: [['Country','University','QS Ranking','Required Profile Score','Your Profile %','Gap %']],
+      body: gapBody,
+      styles:{fontSize:9, cellPadding:4},
+      headStyles:{fillColor:[230,230,230]},
+      columnStyles: { 1: { cellWidth: 220 } },
+      didDrawPage: function () { /* allow multiple pages */ }
+    });
+
+    const posY = doc.lastAutoTable.finalY + 18;
+    doc.setFontSize(12);
+    doc.text("Ambitious Universities", 40, posY);
+    const ambBody = data.ambitious_df.map(r=>[r.Country, r.University, r["QS Ranking"]||'', r["Required Profile Score"], r["Your Profile %"], r["Gap %"]]);
+    doc.autoTable({
+      startY: posY+8,
+      head:[['Country','University','QS Ranking','Required','Your %','Gap %']],
+      body: ambBody,
+      styles:{fontSize:9}, headStyles:{fillColor:[255,230,230]}
+    });
+
+    const posY2 = doc.lastAutoTable.finalY + 12;
+    doc.text("Target Universities", 40, posY2);
+    const tgtBody = data.target_df.map(r=>[r.Country, r.University, r["QS Ranking"]||'', r["Required Profile Score"], r["Your Profile %"], r["Gap %"]]);
+    doc.autoTable({
+      startY: posY2+8,
+      head:[['Country','University','QS Ranking','Required','Your %','Gap %']],
+      body: tgtBody,
+      styles:{fontSize:9}, headStyles:{fillColor:[230,240,255]}
+    });
+
+    const posY3 = doc.lastAutoTable.finalY + 12;
+    doc.text("Safe Universities", 40, posY3);
+    const safeBody = data.safe_df.map(r=>[r.Country, r.University, r["QS Ranking"]||'', r["Required Profile Score"], r["Your Profile %"], r["Gap %"]]);
+    doc.autoTable({
+      startY: posY3+8,
+      head:[['Country','University','QS Ranking','Required','Your %','Gap %']],
+      body: safeBody,
+      styles:{fontSize:9}, headStyles:{fillColor:[230,255,230]}
+    });
+
+    doc.save("university_report.pdf");
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Study-Abroad — University Readiness Assessment</title>
+
+<!-- jsPDF (kept) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --brand:#e6403a; --brand-600:#d8352e;
+    --muted:#6b7280; --page-bg:#f7f8fb; --card:#ffffff; --stroke:#e5e7eb;
+    --blue:#1E88E5; --green:#10b981; --red:#d22c2c;
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter, "Segoe UI", Roboto, Arial; margin:0; background:var(--page-bg); color:#111;}
+  .topbar{position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid var(--stroke); backdrop-filter: blur(6px);}
+  .topbar-inner{max-width:1200px; margin:0 auto; padding:14px 20px; display:flex; align-items:center; gap:12px;}
+  .brand-badge{display:flex; align-items:center; gap:12px; font-weight:700; color:#1f2937;}
+  .badge{width:36px; height:36px; border-radius:10px; background:var(--brand); color:#fff; display:grid; place-items:center; font-family:Poppins, Inter; font-weight:700; box-shadow:0 8px 26px rgba(230,64,58,.18)}
+  .site-link{margin-left:auto; display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; background:#fff1f0; color:var(--brand); text-decoration:none; border:1px solid #ffd6d3; font-weight:600}
+
+  .wrap{max-width:1200px; margin:28px auto; padding:0 20px;}
+  .card{background:var(--card); border:1px solid var(--stroke); border-radius:14px; box-shadow:0 20px 60px rgba(16,24,40,.06); padding:22px; margin-bottom:18px;}
+  h1{font-family:Poppins, Inter; margin:0 0 12px; font-size:22px}
+  label{display:block; margin-top:10px; font-weight:600; color:#374151;}
+  input[type="text"], input[type="email"], input[type="tel"], input[type="number"], select{width:100%; padding:12px; border-radius:10px; border:1px solid var(--stroke); font-size:15px; background:#fff; outline:none;}
+  input:focus, select:focus{box-shadow:0 0 0 6px rgba(203,230,255,.6); border-color:#bcd3ff}
+  .help{font-size:13px; color:var(--muted); margin-top:6px}
+  .error{color:#dc2626; font-size:13px; margin-top:6px}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media (max-width:900px){ .grid-2{grid-template-columns:1fr} }
+
+  .btn{appearance:none; border:none; cursor:pointer; padding:12px 16px; border-radius:10px; font-weight:700}
+  .btn-primary{background:var(--brand); color:white; box-shadow:0 10px 18px rgba(230,64,58,.18)}
+  .btn-primary:hover{background:var(--brand-600); transform:translateY(-1px)}
+  .btn-ghost{background:transparent; color:#0d6efd}
+
+  /* country selector styles */
+  .multi-wrapper{position:relative}
+  .chips { display:flex; gap:8px; align-items:center; min-height:54px; padding:12px 14px; background:#f1f5f9; border-radius:10px; cursor:pointer; border:1px solid #e6e6e6; }
+  .chips:focus{outline:0; box-shadow:0 0 0 6px rgba(203,230,255,.6)}
+  .chip { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:#fff; color:#0b3d91; font-weight:700; font-size:14px; border:1px solid #e6eefb; }
+  .chip .caret{margin-left:8px; font-size:12px; opacity:.9}
+  .chip .caret-wrap{display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:8px; background:rgba(0,0,0,0.03)}
+  .dropdown { position:absolute; left:0; right:0; top:calc(100% + 8px); background:#fff; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,.12); max-height:320px; overflow:auto; z-index:40; display:none; border:1px solid #eef2f7;}
+  .dropdown .item { padding:12px 14px; cursor:pointer; border-bottom:1px solid #f4f6f8; display:flex; align-items:center; gap:12px; background:#fff }
+  .dropdown .item:last-child { border-bottom:0 }
+  .dropdown .item:hover { background:#f8fafc; }
+  .dropdown .item input[type="checkbox"]{width:16px;height:16px}
+  .dropdown .footer{display:flex;justify-content:space-between;padding:10px;border-top:1px solid #f1f3f5;background:#fbfcfd;border-radius:0 0 8px 8px}
+  .dropdown .footer button{padding:8px 10px;border-radius:8px;border:1px solid #e6eefb;background:#fff}
+
+  .uni-card{flex:1 1 calc(33.333% - 12px);min-width:230px;background:#fff;border-radius:10px;padding:12px;border-top:4px solid var(--blue);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .cards-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+  @media (max-width:900px){ .uni-card{flex:1 1 100%} }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-badge">
+        <div class="badge">SA</div>
+        <div>Study Abroad Tools</div>
+      </div>
+      <a class="site-link" href="#" onclick="return false;">University Readiness</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- STUDENT DETAILS -->
+    <section id="detailsSection" class="card">
+      <h1>Enter Student Details</h1>
+      <form id="detailsForm" novalidate>
+        <div class="grid-2">
+          <div>
+            <label for="studentName">Full Name</label>
+            <input id="studentName" type="text" placeholder="e.g., Agam Puri" />
+            <div id="errName" class="error"></div>
+          </div>
+          <div>
+            <label for="studentEmail">Email</label>
+            <input id="studentEmail" type="email" placeholder="e.g., name@example.com" />
+            <div id="errEmail" class="error"></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label for="studentMobile">Mobile Number</label>
+            <input id="studentMobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit Indian mobile" />
+            <div class="help">We’ll use this to share prediction updates (optional).</div>
+            <div id="errMobile" class="error"></div>
+          </div>
+          <div>
+            <label for="studentState">State</label>
+            <select id="studentState">
+              <option value="">Select State</option>
+            </select>
+            <div id="errState" class="error"></div>
+          </div>
+        </div>
+
+        <div>
+          <label for="studentCity">City</label>
+          <input id="studentCity" type="text" placeholder="e.g., Pune" />
+          <div id="errCity" class="error"></div>
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:12px; align-items:center">
+          <button id="saveContinueBtn" class="btn btn-primary" type="submit">Save & Continue</button>
+          <span class="help">By continuing, you consent to store your details locally for a better experience.</span>
+        </div>
+      </form>
+    </section>
+
+    <!-- PREDICTOR INPUTS -->
+    <section id="predictorSection" class="card" style="display:none;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+        <h1>University Readiness Assessment</h1>
+        <button id="editDetailsBtn" class="btn btn-ghost" type="button">Edit details</button>
+      </div>
+
+      <div id="helloBanner" class="help" style="margin:8px 0 14px; display:none;"></div>
+
+      <div class="section-title">Choose Countries</div>
+
+      <div class="multi-wrapper">
+        <!-- full-width input-like box with chip inside -->
+        <div id="chipContainer" class="chips" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+          <div class="chip" id="mainChip">All
+            <span class="caret-wrap"><span class="caret">▾</span></span>
+          </div>
+        </div>
+
+        <div id="countryDropdown" class="dropdown" role="listbox" aria-multiselectable="true" aria-hidden="true">
+          <!-- built dynamically on demand; keeps display:none until toggle -->
+        </div>
+
+        <!-- hidden select used by the rest of the logic -->
+        <select id="countrySelect" multiple size="6" style="display:none"></select>
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="grid-2">
+          <div>
+            <label>Class 9 %</label>
+            <input id="c9" type="number" min="0" max="100" />
+            <label>Class 10 %</label>
+            <input id="c10" type="number" min="0" max="100" />
+            <label>Class 11 %</label>
+            <input id="c11" type="number" min="0" max="100" />
+            <label>Class 12 %</label>
+            <input id="c12" type="number" min="0" max="100" />
+            <label>SAT/ACT (400-1600)</label>
+            <input id="sat" type="number" min="400" max="1600" />
+          </div>
+
+          <div>
+            <label>Co-curricular (0-3)</label>
+            <input id="cc" type="number" min="0" max="3" />
+            <label>Extra-curricular (0-3)</label>
+            <input id="ec" type="number" min="0" max="3" />
+            <label>Internships (0-2)</label>
+            <select id="intern">
+              <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+            </select>
+
+            <label style="display:block;margin-top:8px"><input id="community" type="checkbox" /> Community Service</label>
+            <label style="display:block"><input id="research" type="checkbox" /> Research Project</label>
+
+            <label>Number of LORs (0-3)</label>
+            <select id="lor">
+              <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center">
+          <div>
+            <label>Number of APs (0–5)</label>
+            <input id="n_ap" type="number" min="0" max="5" value="0" />
+          </div>
+          <div style="margin-left:auto">
+            <button class="btn btn-primary" id="findBtn">🔍 Find My Universities</button>
+          </div>
+        </div>
+
+        <div id="apInputs" style="margin-top:12px"></div>
+      </div>
+    </section>
+
+    <div id="localNote" class="help" style="margin-top:10px">After you click <strong>Find My Universities</strong> you'll be taken to the Results page where your personalised output and downloadable PDF will appear.</div>
+  </main>
+
+<script>
+/* ========== CONFIG ========== */
+/* Replace with your Apps Script web app URL if you want logging to Sheets */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPVWLOk0lgYA4XUX5Sk5ABZPDQyqeiWpi7nEs-kBpsEyLFuqdJTQpSn3vUUAB_g0s-fw/exec";
+
+/* ========== LOCAL STORAGE KEYS ========== */
+const LS_DETAILS = "STUDENT_DETAILS";
+const LS_PROFILE = "STUDY_PROFILE";
+
+/* ========== HELPERS ========== */
+const getDetails = () => { try{ return JSON.parse(localStorage.getItem(LS_DETAILS)); }catch{ return null; } };
+const saveDetailsLocal = (d) => localStorage.setItem(LS_DETAILS, JSON.stringify(d));
+const getProfile = () => { try{ return JSON.parse(localStorage.getItem(LS_PROFILE)); }catch{ return null; } };
+const saveProfileLocal = (p) => localStorage.setItem(LS_PROFILE, JSON.stringify(p));
+
+/* Simple apps script POST helper (non-blocking) */
+async function postToAppsScript(payload){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("REPLACE_YOUR_SCRIPT_ID")){
+    console.debug("Apps Script URL not configured; skipping post.", payload);
+    return {ok:false, message:"Apps Script URL not configured"};
+  }
+  try{
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+    return {ok:true, status:res.status, text};
+  }catch(err){
+    console.error("Apps Script post error:", err);
+    return {ok:false, message:err.message};
+  }
+}
+
+/* ========== STATES FILLER ========== */
+const statesIN = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
+function fillStates(){ const sel = document.getElementById('studentState'); statesIN.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o);} );}
+
+/* ========== VALIDATION ========== */
+function validateDetails(){
+  const name   = document.getElementById('studentName').value.trim();
+  const email  = document.getElementById('studentEmail').value.trim();
+  const mobile = document.getElementById('studentMobile').value.trim();
+  const state  = document.getElementById('studentState').value.trim();
+  const city   = document.getElementById('studentCity').value.trim();
+
+  ['errName','errEmail','errMobile','errState','errCity'].forEach(id=>document.getElementById(id).textContent='');
+
+  let ok=true;
+  if(!name){ document.getElementById('errName').textContent='Please enter your name.'; ok=false; }
+  const emailOK=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+  if(!emailOK){ document.getElementById('errEmail').textContent='Please enter a valid email.'; ok=false; }
+  const mobileOK=/^[6-9]\d{9}$/.test(mobile);
+  if(!mobileOK){ document.getElementById('errMobile').textContent='Enter a valid 10-digit Indian mobile number.'; ok=false; }
+  if(!state){ document.getElementById('errState').textContent='Select your state.'; ok=false; }
+  if(!city){ document.getElementById('errCity').textContent='Enter your city.'; ok=false; }
+
+  return ok ? {name,email,mobile,state,city} : null;
+}
+
+/* ========== BOOT ========== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  fillStates();
+
+  const existing = getDetails();
+  if(existing && existing.name && existing.email && existing.mobile && existing.state && existing.city){
+    showPredictor(existing);
+  }else{
+    showDetailsForm(existing);
+  }
+
+  // details form
+  const form = document.getElementById('detailsForm');
+  const btn  = document.getElementById('saveContinueBtn');
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const data = validateDetails();
+    if(!data) return;
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = "Saving…";
+    try{
+      saveDetailsLocal(data);
+      // post to apps script (non-blocking) — send under "details" key
+      postToAppsScript({type:"save_details", timestamp:new Date().toISOString(), details:data});
+      showPredictor(data);
+    }catch(err){
+      alert("Could not save your details. Please try again.");
+      console.error(err);
+    }finally{
+      btn.disabled = false; btn.textContent = original;
+    }
+  });
+
+  document.getElementById('editDetailsBtn').addEventListener('click', ()=> showDetailsForm(getDetails() || {}));
+
+  // restore profile values if present (now handle raw OR normalized)
+  const profile = getProfile();
+  if(profile){
+    // prefer raw inputs if available, otherwise convert normalized back to raw for display
+    document.getElementById('c9').value = (profile.c9_raw !== undefined) ? profile.c9_raw : (profile.c9 !== undefined ? Math.round(profile.c9*100) : '');
+    document.getElementById('c10').value = (profile.c10_raw !== undefined) ? profile.c10_raw : (profile.c10 !== undefined ? Math.round(profile.c10*100) : '');
+    document.getElementById('c11').value = (profile.c11_raw !== undefined) ? profile.c11_raw : (profile.c11 !== undefined ? Math.round(profile.c11*100) : '');
+    document.getElementById('c12').value = (profile.c12_raw !== undefined) ? profile.c12_raw : (profile.c12 !== undefined ? Math.round(profile.c12*100) : '');
+    document.getElementById('sat').value = (profile.sat_raw !== undefined) ? profile.sat_raw : (profile.sat !== undefined ? Math.round(profile.sat*1600) : '');
+    document.getElementById('cc').value = profile.cc ?? '';
+    document.getElementById('ec').value = profile.ec ?? '';
+    // internships: allow intr or intern or 'intern' id
+    document.getElementById('intern').value = profile.intr ?? profile.intern ?? '0';
+    document.getElementById('lor').value = profile.n_lor ?? profile.lor ?? '0';
+    document.getElementById('n_ap').value = profile.n_ap ?? 0;
+    document.getElementById('community').checked = !!profile.community;
+    document.getElementById('research').checked = !!profile.research;
+  }
+
+  // AP inputs listener
+  document.getElementById('n_ap').addEventListener('input', ()=> {
+    const raw = document.getElementById('n_ap').value;
+    let n = parseInt(raw);
+    if(isNaN(n) || n < 0) n = 0;
+    if(n > 5) n = 5;
+    const apDiv = document.getElementById('apInputs');
+    apDiv.innerHTML = '';
+    for(let i=0;i<n;i++){
+      const wrapper = document.createElement('div');
+      wrapper.style.marginBottom = '8px';
+      wrapper.innerHTML = `<label style="font-weight:600; margin-top:6px">AP ${i+1} score (0.0 - 5.0)</label>
+                           <input type="number" step="0.1" min="0" max="5" id="ap_${i}" />`;
+      apDiv.appendChild(wrapper);
+    }
+    // populate existing APs if any
+    if(profile && profile.ap_scores && profile.ap_scores.length){
+      for(let i=0;i<profile.ap_scores.length && i<n;i++){
+        const el = document.getElementById(`ap_${i}`);
+        if(el) el.value = profile.ap_scores[i];
+      }
+    }
+  });
+
+  // Find button -> save profile and go to results
+  document.getElementById('findBtn').addEventListener('click', async ()=>{
+    // Collect raw numeric inputs (as user entered)
+    const c9_raw = Number(document.getElementById('c9').value || 0);
+    const c10_raw = Number(document.getElementById('c10').value || 0);
+    const c11_raw = Number(document.getElementById('c11').value || 0);
+    const c12_raw = Number(document.getElementById('c12').value || 0);
+    const sat_raw = Number(document.getElementById('sat').value || 400);
+
+    // normalized for internal calculation
+    const c9 = (c9_raw)/100;
+    const c10 = (c10_raw)/100;
+    const c11 = (c11_raw)/100;
+    const c12 = (c12_raw)/100;
+    const sat = (sat_raw)/1600;
+
+    const n_ap = Math.max(0, Math.min(5, parseInt(document.getElementById('n_ap').value||0)));
+    let ap_scores = [];
+    for(let i=0;i<n_ap;i++){
+      const v = Number(document.getElementById(`ap_${i}`)?.value || 0);
+      ap_scores.push(v);
+    }
+    const avg_ap = (n_ap > 0) ? (ap_scores.reduce((a,b)=>a+(Number(b)||0),0) / (n_ap * 5)) : 0.0;
+    const cc = Number(document.getElementById('cc').value||0);
+    const ec = Number(document.getElementById('ec').value||0);
+    const intr = Number(document.getElementById('intern').value||0);
+    const community = document.getElementById('community').checked ? 1.0 : 0.0;
+    const research = document.getElementById('research').checked ? 1.0 : 0.0;
+    const n_lor = Number(document.getElementById('lor').value||0);
+
+    // countries from hidden select
+    const sel = Array.from(document.getElementById('countrySelect').selectedOptions).map(o => o.value);
+    const countries = (sel.length === 0 || sel.includes('All')) ? ["All"] : sel;
+
+    // Student details (saved earlier)
+    const details = getDetails() || {name:"", email:"", mobile:"", state:"", city:""};
+
+    // Compose profile payload with raw + normalized fields
+    const profilePayload = {
+      // raw inputs (human readable)
+      c9_raw, c10_raw, c11_raw, c12_raw, sat_raw,
+      // normalized (0..1)
+      c9, c10, c11, c12, sat,
+      // APs
+      n_ap, ap_scores, avg_ap,
+      // activities and others
+      cc, ec, intr,
+      community, research, n_lor,
+      // countries array
+      countries
+    };
+
+    // Save profile locally (so results page and restoration work)
+    saveProfileLocal(profilePayload);
+
+    // Apps Script logging: send a full payload with details + profile
+    postToAppsScript({type:"predict", timestamp:new Date().toISOString(), details:details, profile:profilePayload});
+
+    // navigate to results page (existing results logic expects STUDY_PROFILE)
+    window.location.href = "results.html";
+  });
+
+  // init country UI
+  initCountryUI();
+});
+
+/* ========== show / hide helpers ========== */
+function showPredictor(details){
+  const banner = document.getElementById('helloBanner');
+  banner.textContent = `Hi ${details.name}! We’ll personalise suggestions for ${details.city}, ${details.state}.`;
+  banner.style.display = 'block';
+  document.getElementById('detailsSection').style.display='none';
+  document.getElementById('predictorSection').style.display='block';
+}
+function showDetailsForm(prefill){
+  document.getElementById('predictorSection').style.display='none';
+  document.getElementById('detailsSection').style.display='block';
+  if(prefill){
+    document.getElementById('studentName').value   = prefill.name   || "";
+    document.getElementById('studentEmail').value  = prefill.email  || "";
+    document.getElementById('studentMobile').value = prefill.mobile || "";
+    document.getElementById('studentState').value  = prefill.state  || "";
+    document.getElementById('studentCity').value   = prefill.city   || "";
+  }
+}
+
+/* ========== COUNTRY MULTI-SELECT (DEFAULT: All selected, dropdown closed) ========== */
+function initCountryUI(){
+  const sel = document.getElementById('countrySelect');
+  // default to "All" selected (hidden select)
+  sel.innerHTML = `<option value="All" selected>All</option>`;
+
+  const chipContainer = document.getElementById('chipContainer');
+  const dd = document.getElementById('countryDropdown');
+
+  // build dropdown (does NOT open it). Called on-demand or when restoring profile.
+  async function buildDropdown(){
+    if(dd.dataset.built === '1') return;
+    // populate from College_finder.json
+    try{
+      const pf = await fetch('College_finder.json').then(r=>r.json());
+      const countries = Array.from(new Set(pf.map(r=> (r.Country||'').trim()).filter(Boolean))).sort();
+      countries.unshift('All');
+      // fill hidden select
+      sel.innerHTML = '';
+      countries.forEach(c=>{
+        const o = document.createElement('option'); o.value = c; o.textContent = c;
+        if(c === 'All') o.selected = true;
+        sel.appendChild(o);
+      });
+
+      // build dropdown items with checkboxes (All checked by default)
+      const itemsHtml = countries.map(c=>{
+        const checked = (c === 'All') ? 'checked' : '';
+        return `<div class="item" data-val="${escapeHtmlAttr(c)}">
+                  <input type="checkbox" ${checked} aria-label="${escapeHtmlAttr(c)}" />
+                  <div style="flex:1">${escapeHtml(c)}</div>
+                </div>`;
+      }).join('');
+      dd.innerHTML = itemsHtml + `<div class="footer" style="display:flex"><div id="selCount">1 selected</div><div><button id="clearCountries" type="button">Clear</button><button id="applyCountries" type="button">Apply</button></div></div>`;
+      dd.dataset.built = '1';
+      wireDropdownEvents();
+      // ensure dropdown remains hidden after build (we do not open automatically)
+      dd.style.display = 'none';
+      dd.setAttribute('aria-hidden','true');
+      renderChip(); // reflect current selection in chip
+    }catch(err){
+      dd.innerHTML = `<div style="padding:12px;color:#b00">Could not load countries.</div>`;
+      console.error(err);
+    }
+  }
+
+  // wiring of checkbox clicks + buttons
+  function wireDropdownEvents(){
+    dd.querySelectorAll('.item').forEach(it=>{
+      it.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const cb = it.querySelector('input[type="checkbox"]');
+        cb.checked = !cb.checked;
+        syncSelectFromDropdown();
+      });
+    });
+
+    const applyBtn = dd.querySelector('#applyCountries');
+    const clearBtn = dd.querySelector('#clearCountries');
+    if(applyBtn) applyBtn.addEventListener('click', ()=>{ dd.style.display='none'; chipContainer.setAttribute('aria-expanded','false'); dd.setAttribute('aria-hidden','true'); renderChip(); });
+    if(clearBtn) clearBtn.addEventListener('click', ()=> {
+      // clear all and set All
+      const boxes = dd.querySelectorAll('.item input[type="checkbox"]');
+      boxes.forEach(box => box.checked = false);
+      const allItem = dd.querySelector('.item[data-val="All"] input[type="checkbox"]');
+      if(allItem) allItem.checked = true;
+      syncSelectFromDropdown();
+      renderChip();
+    });
+  }
+
+  // sync checkboxes -> hidden select
+  function syncSelectFromDropdown(){
+    const items = Array.from(dd.querySelectorAll('.item'));
+    const allItem = items.find(it => it.getAttribute('data-val') === 'All');
+    const allChecked = allItem ? allItem.querySelector('input[type="checkbox"]').checked : false;
+
+    if(allChecked){
+      // if All checked, uncheck everything else and mark only All on select
+      items.forEach(it => {
+        if(it.getAttribute('data-val') !== 'All') it.querySelector('input[type="checkbox"]').checked = false;
+      });
+    } else {
+      // if any non-All checked, ensure All is unchecked
+      const anyNonAll = items.some(it => it.getAttribute('data-val') !== 'All' && it.querySelector('input[type="checkbox"]').checked);
+      if(anyNonAll && allItem) allItem.querySelector('input[type="checkbox"]').checked = false;
+      // if none checked -> set All
+      const anyChecked = items.some(it => it.querySelector('input[type="checkbox"]').checked);
+      if(!anyChecked && allItem) allItem.querySelector('input[type="checkbox"]').checked = true;
+    }
+
+    // now sync to hidden select
+    const opts = Array.from(sel.options);
+    opts.forEach(o => {
+      const matchingItem = dd.querySelector(`.item[data-val="${CSS.escape(o.value)}"]`);
+      if(matchingItem){
+        const cb = matchingItem.querySelector('input[type="checkbox"]');
+        o.selected = !!cb.checked;
+      }
+    });
+
+    // update footer count
+    const count = Array.from(sel.selectedOptions).length;
+    const footerCount = dd.querySelector('#selCount');
+    if(footerCount) footerCount.textContent = `${count} selected`;
+  }
+
+  // render chip label based on hidden select
+  function renderChip(){
+    const selected = Array.from(sel.selectedOptions).map(o=>o.value);
+    const chip = document.getElementById('mainChip');
+    if(selected.length === 0 || (selected.length === 1 && selected[0] === 'All')){
+      chip.innerHTML = `All <span class="caret-wrap"><span class="caret">▾</span></span>`;
+    } else if(selected.length === 1){
+      chip.innerHTML = `${escapeHtml(selected[0])} <span class="caret-wrap"><span class="caret">▾</span></span>`;
+    } else {
+      chip.innerHTML = `${selected.length} selected <span class="caret-wrap"><span class="caret">▾</span></span>`;
+    }
+  }
+
+  // toggle dropdown when user clicks the chipContainer (full input box)
+  chipContainer.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if(dd.dataset.built !== '1') {
+      await buildDropdown(); // build but remain hidden
+    }
+    const expanded = dd.style.display === 'block';
+    if(!expanded){
+      dd.style.display = 'block';
+      chipContainer.setAttribute('aria-expanded','true');
+      dd.setAttribute('aria-hidden','false');
+      // ensure footer count up-to-date
+      syncSelectFromDropdown();
+    } else {
+      dd.style.display = 'none';
+      chipContainer.setAttribute('aria-expanded','false');
+      dd.setAttribute('aria-hidden','true');
+    }
+  });
+
+  // close dropdown if clicked outside
+  document.addEventListener('click', (e)=>{
+    const wrapper = document.querySelector('.multi-wrapper');
+    if(!wrapper || !wrapper.contains(e.target)){
+      dd.style.display = 'none';
+      chipContainer.setAttribute('aria-expanded','false');
+      dd.setAttribute('aria-hidden','true');
+    }
+  });
+
+  // if profile exists, restore selection (build dropdown quietly)
+  const profile = getProfile();
+  if(profile && profile.countries && profile.countries.length){
+    (async ()=>{
+      await buildDropdown();
+      // set options in hidden select based on profile.countries
+      const opts = Array.from(sel.options);
+      opts.forEach(o => { o.selected = profile.countries.includes(o.value) || (profile.countries.includes("All") && o.value === "All"); });
+      // ensure All handling
+      const anyNonAll = Array.from(sel.selectedOptions).some(o=>o.value !== 'All');
+      if(anyNonAll){
+        const allOpt = Array.from(sel.options).find(o=>o.value==='All');
+        if(allOpt) allOpt.selected = false;
+      }
+      // sync checkboxes to reflect select
+      dd.querySelectorAll('.item').forEach(it=>{
+        const val = it.getAttribute('data-val');
+        const cb = it.querySelector('input[type="checkbox"]');
+        if(cb){
+          cb.checked = Array.from(sel.selectedOptions).some(o=>o.value === val);
+        }
+      });
+      syncSelectFromDropdown();
+      renderChip();
+      // keep dropdown closed
+      dd.style.display = 'none';
+      dd.setAttribute('aria-hidden','true');
+    })();
+  } else {
+    // ensure chip shows default All (we already set that)
+    renderChip();
+    // don't build dropdown until user clicks
+  }
+}
+
+/* tiny helper to escape HTML content for rendering */
+function escapeHtml(s){ return String(s || '').replace(/[&<>"']/g, (m)=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeHtmlAttr(s){ return String(s || '').replace(/"/g, '&quot;'); }
+</script>
+</body>
+</html>
